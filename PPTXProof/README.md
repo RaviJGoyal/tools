@@ -1,91 +1,96 @@
-# PPTX Proofreading Language Tool
+# PPTXProof
 
-A lightweight Windows GUI tool that sets the proofing (spell-check) language on **every text element** in an open PowerPoint presentation — slides, notes, tables, grouped shapes, masters and layouts.
+Sets **one proofing (spell-check) language on everything** in PowerPoint presentations, so the wavy red underlines caused by text tagged with the wrong language disappear.
 
-Useful when working on a system where the OS language differs from the presentation language (e.g. German Windows but English slides), causing red squiggly spell-check marks everywhere.
+It is a single PowerShell script with a small window. There is no exe and nothing to install, and you don't need admin rights.
 
-## Features
+## Quick start
 
-- Auto-detects the currently open PowerPoint presentation
-- Sets proofing language on all text elements in one click:
-  - Slide shapes (text boxes, titles, callouts, etc.)
-  - Grouped shapes (recursive)
-  - Table cells
-  - Notes pages
-  - Slide masters and custom layouts
-- Supported languages: **English (US)** and **German (DE)**
-- Saves the presentation after patching
-- No installation required — single EXE, zero dependencies
+1. Double-click **`PPTXProof.cmd`**.
+2. Drop presentations (or whole folders) into the window, or click **Add files...**.
+   If PowerPoint is open, the presentation you are working on is already in the list.
+3. Pick the language (German or English, etc.) and click **Set language**.
 
-## Requirements
+Each file shows the result, for example *"812 of 1,234 text elements set to German (Germany) (before: en-US 790, none 22)"*.
 
-- **Windows** (uses PowerShell, WinForms, and COM automation — not compatible with macOS/Linux)
-- **Microsoft PowerPoint** must be installed and running with a presentation open
-- No admin rights needed
+If a presentation is open in PowerPoint, PPTXProof asks whether to save and close it, applies the language, and opens it again.
 
-## Usage
+### Shortcuts and right-click menu
 
-1. Open your `.pptx` file in PowerPoint
-2. Double-click `PPTXProof.exe`
-3. Select the target language from the dropdown
-4. Click **"Set Proofreading Language"**
-5. Done — all text elements are patched and the file is saved
+Click **Create shortcuts** at the bottom of the window to add PPTXProof to the Start menu, the Desktop and Explorer's **Send to** menu. Then you can right-click one or more presentations and choose **Show more options > Send to > PPTXProof**.
+
+You can also drag presentations onto `PPTXProof.cmd`. If you move the folder, create the shortcuts again.
+
+## What gets changed
+
+All text in the file is set to the chosen language:
+
+- Slides: text boxes, placeholders, grouped shapes (any depth), tables, charts and SmartArt
+- Speaker notes, notes master and handout master
+- Slide masters and layouts
+- Empty placeholders and paragraph ends, so text you type there later also gets the right language
+- Presentation and theme defaults for new text
+- Text without any language tag. It would otherwise fall back to PowerPoint's editing language.
+
+Old spell-check results are cleared for the changed text, so PowerPoint checks it again.
+
+Your file is handled carefully:
+
+- PPTXProof edits a temporary copy, re-reads it to make sure it is intact, and only then replaces the original.
+- Check **Keep a backup copy** to also keep the untouched original next to it, as `Name (backup 2026-10-22 153000).pptx`.
+- Running it twice changes nothing.
+
+Supported files: `.pptx`, `.pptm`, `.ppsx`, `.ppsm`, `.potx`, `.potm`. Old `.ppt` files must be saved as `.pptx` first. Password-protected or encrypted files (for example with a sensitivity label) cannot be edited.
+
+## If typed text still gets the wrong language
+
+PowerPoint tags newly typed text with the language of your **keyboard layout**. If you write English slides with a German keyboard layout active, new text may be marked as German again.
+
+- Switch the layout with `Win + Space`, or remove layouts you don't use (Settings > Time & language > Language & region).
+- Run PPTXProof again before you finish, so everything ends up in one language.
+
+## Command line
+
+```powershell
+.\PPTXProof.ps1                                              # open the window
+.\PPTXProof.ps1 .\Talk.pptx -Language en-GB                  # window with file and language preselected
+.\PPTXProof.ps1 .\Talk.pptx .\Slides -Language de-DE -NoGui  # no window; folders are searched recursively
+.\PPTXProof.ps1 .\Talk.pptx -Language en-US -Backup -NoGui   # keep a backup copy
+```
+
+`-Language` takes any language tag (`fr-FR`, `es-ES`, ...). With `-NoGui`, the script exits with code 1 if any file failed.
+
+## Troubleshooting
+
+- **"Windows protected your PC" / security warning:** the files were downloaded from the internet. Right-click `PPTXProof.cmd` and `PPTXProof.ps1`, open **Properties**, tick **Unblock**, and click OK.
+- **Nothing happens / PowerShell is blocked:** some company policies block PowerShell scripts entirely (the launcher already bypasses the normal execution policy). In that case ask IT to allow it.
+- **"The file is open in another program":** close the file in that program and try again. For PowerPoint, PPTXProof offers to do this for you.
+
+## Adding a language to the window
+
+Add an entry to `$Languages` at the top of `PPTXProof.ps1`:
+
+```powershell
+$Languages = [ordered]@{
+    'de-DE' = 'German (Germany)'
+    ...
+    'fr-FR' = 'French (France)'   # <-- new entry
+}
+```
+
+## How it works
+
+A `.pptx` file is a ZIP archive of XML files. Every piece of text has a `lang` attribute, for example `<a:rPr lang="en-US"/>`. PPTXProof opens the archive and sets that attribute on all text, paragraph ends and text defaults in every slide, notes page, master, layout, chart and SmartArt part. It also adds the attribute where it is missing.
+
+Because it edits the file directly, it doesn't depend on PowerPoint's automation interface. PowerPoint is only used, when it is running, to close and reopen a presentation you have open.
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `PPTXProof.exe` | Compiled EXE — just double-click to run |
-| `PPTX_Language_Tool.ps1` | PowerShell source code |
-| `app.ico` | Application icon |
-
-## Adding a Language
-
-Edit `PPTX_Language_Tool.ps1` and add an entry to the `$Languages` hashtable:
-
-```powershell
-$Languages = [ordered]@{
-    "English (US)" = 1033
-    "German (DE)"  = 1031
-    "French (FR)"  = 1036   # <-- add new languages here
-}
-```
-
-Language IDs are `msoLanguageID` constants. Common values:
-
-| Language | ID |
-|----------|----|
-| English (US) | 1033 |
-| English (UK) | 2057 |
-| German (DE) | 1031 |
-| French (FR) | 1036 |
-| Spanish (ES) | 3082 |
-| Italian (IT) | 1040 |
-| Portuguese (BR) | 1046 |
-| Dutch (NL) | 1043 |
-| Polish (PL) | 1045 |
-| Chinese (Simplified) | 2052 |
-| Japanese (JP) | 1041 |
-
-Full list: [Microsoft msoLanguageID docs](https://learn.microsoft.com/en-us/office/vba/api/office.msolanguageid)
-
-## Recompiling the EXE
-
-Install the `ps2exe` PowerShell module (one-time):
-
-```powershell
-Install-Module -Name ps2exe -Scope CurrentUser -Force
-```
-
-Then compile:
-
-```powershell
-Invoke-ps2exe -InputFile PPTX_Language_Tool.ps1 -OutputFile PPTXProof.exe -noConsole -iconFile app.ico -title "PPTX Proofreading Language Tool"
-```
-
-## How It Works
-
-The tool connects to the running PowerPoint instance via COM automation (`GetActiveObject("PowerPoint.Application")`), iterates every shape on every slide/master/layout, and sets `TextFrame.TextRange.LanguageID` to the selected language code. This is the same approach as doing it manually in PowerPoint via *Review > Language > Set Proofing Language*, but applied to all elements at once.
+| `PPTXProof.cmd` | Launcher: double-click it, or drop presentations onto it |
+| `PPTXProof.ps1` | The tool (window and command line) |
+| `app.ico` | Window and shortcut icon |
 
 ## License
 

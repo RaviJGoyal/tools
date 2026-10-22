@@ -6,5 +6,5 @@ A collection of small, portable utilities for everyday tasks.
 
 | Tool | Description |
 |------|-------------|
-| [PPTXProof](PPTXProof/) | Set proofing language on all text elements in a PowerPoint presentation |
+| [PPTXProof](PPTXProof/) | Set the proofing (spell-check) language of everything in PowerPoint presentations, including notes, tables, charts and masters. No exe, no install. |
 
